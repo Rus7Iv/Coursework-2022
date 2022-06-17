@@ -10,7 +10,7 @@ int main() {
 	omp_set_num_threads(4);
 
 #ifdef _OPENMP 
-	cout << "openmp support\n";
+	cout << "OpenMP support\n";
 #endif
 
 	int countVertices, countEdges;
