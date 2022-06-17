@@ -4,6 +4,8 @@
 #include <list> 
 #include <set>
 
+omp_lock_t lock;
+
 using namespace std;
 
 Graph::Graph()
@@ -56,21 +58,26 @@ void Graph::connections(int currentVertice, bool visited[], int dis[], int low[]
 }
 
 void Graph::findMaxCut() {
+    omp_init_nest_lock(&lock);
     bool* visited = new bool[this->numberVertices];
     int* dis = new int[this->numberVertices];
     int* low = new int[this->numberVertices];
     int* par = new int[this->numberVertices];
     int i;
-    // отмечаем все вершины как непосещённые 
-#pragma omp parallel for
+
+#pragma omp parallel for private(i) shared(par, visited)
     for (i = 0; i < this->numberVertices; i++) {
         par[i] = -1;
         visited[i] = false;
     }
 #pragma omp for
-    for (i = 0; i < this->numberVertices; i++)
+    for (i = 0; i < this->numberVertices; i++) {
+        omp_set_nest_lock(&lock);
         if (visited[i] == false)
             connections(i, visited, dis, low, par);
+        omp_unset_nest_lock(&lock);
+    }
+    omp_destroy_nest_lock(&lock);
 }
 
 void Graph::createGraph(Graph& G, int numberEdges)
