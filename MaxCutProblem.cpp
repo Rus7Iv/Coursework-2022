@@ -131,9 +131,9 @@ int find_max_edges(vector<int> vertex)
 			edges = 0;
 			curr_vertex = vertex[i];
 			edges = graph.list[curr_vertex - 1].size();
+#pragma omp critical 
 			if (edges > max_edges)
 			{
-				#pragma omp critical 
 				max_vertex = curr_vertex;
 				max_edges = edges;
 			}
@@ -211,13 +211,17 @@ bool is_in_vertex(int vertex, vector<int> list)
 // восстановить связь
 void restore_relation(int vertex)
 {
-	for (int i = 0; i < subset.list.size(); i++)
+#pragma omp parallel shared(vertex)
 	{
-		if (subset.list[i] != null_vertex)
+#pragma omp for
+		for (int i = 0; i < subset.list.size(); i++)
 		{
-			if (is_in_vertex(vertex, graph.list[i]) && !is_in_vertex(vertex, subset.list[i]))
+			if (subset.list[i] != null_vertex)
 			{
-				subset.list[i].push_back(vertex + 1);
+				if (is_in_vertex(vertex, graph.list[i]) && !is_in_vertex(vertex, subset.list[i]))
+				{
+					subset.list[i].push_back(vertex + 1);
+				}
 			}
 		}
 	}
@@ -243,14 +247,12 @@ bool is_increase(int vertex, vector<vector<int>> subset_list)
 		{
 			for (int j = 0; j < subset_list[i].size(); j++)
 			{
-
 				if (is_related(subset_list[i][j]))
 				{
 					int buf = subset_list[i][j] - 1;
 					subset_list[i].erase(remove(subset_list[i].begin(), subset_list[i].end(), subset_list[i][j]), subset_list[i].end());
 					subset_list[buf].erase(remove(subset_list[buf].begin(), subset_list[buf].end(), i + 1), subset_list[buf].end());
 				}
-
 			}
 		}
 	}
@@ -284,14 +286,15 @@ vector<vector<int>> find_max_cut()
 {
 	vector<vector<int>> best_result;
 	best_result.resize(graph.list.size());
+#pragma omp parallel for
 	for (int i = 0; i < graph.list.size(); i++)
 	{
 		best_result[i] = null_vertex;
 	}
+ 
 	for (int beg_vertex = 0; beg_vertex < graph.size; beg_vertex++)
 	{
 		subset.list.resize(graph.list.size());
-
 		if (graph.max_size == 0)
 		{
 			int max_size = 0;
@@ -305,7 +308,6 @@ vector<vector<int>> find_max_cut()
 			null_vertex.resize(max_size);
 			graph.max_size = max_size;
 		}
-
 		for (int i = 0; i < graph.list.size(); i++)
 		{
 			subset.list[i] = null_vertex;
@@ -388,12 +390,14 @@ int main()
 {
 	setlocale(LC_ALL, "RUS");
 	omp_set_num_threads(g_nNumberOfThreads);
+
 #ifdef _OPENMP 
 	cout << "OpenMP support\n\n";
 #endif
 	cout << "Список смежности:\n";
-	graph = load_graph("graph.txt");
+	graph = load_graph("graph2.txt");
 	print_graph(graph);
 	cout << "Максимальный разрез равен: " << cut_number(find_max_cut()) << endl;
+	
 	return 0;
 }
